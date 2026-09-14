@@ -1,4 +1,4 @@
-const API_KEY = "5850293cf62845a6b0e446719a74dd37";
+const API_KEY = "YOUR_NEW_API_KEY";
 
 
 // ===============================
