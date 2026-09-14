@@ -1,0 +1,104 @@
+ <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Malik Signals</title>
+</head>
+<nav class="bottom-nav">
+  <button class="nav-item active" onclick="showPage('home', this)">
+    🏠
+    <span>Home</span>
+  </button>
+
+  <button class="nav-item" onclick="showPage('signals', this)">
+    📊
+    <span>Signals</span>
+  </button>
+
+  <button class="nav-item" onclick="showPage('history', this)">
+    🕘
+    <span>History</span>
+  </button>
+
+  <button class="nav-item" onclick="showPage('settings', this)">
+    ⚙️
+    <span>Settings</span>
+  </button>
+</nav>
+<body>
+
+  <div class="app"><header class="top-header">
+  <div class="brand">
+    <div class="logo">M</div>
+    <div>
+      <div class="brand-name">MALIK SIGNALS</div>
+      <div class="brand-sub">AI MARKET ANALYSIS</div>
+    </div>
+  </div>
+
+  <div class="live-badge">
+    <span>●</span> LIVE
+  </div>
+</header>
+    <h1>⚡ MALIK SIGNALS</h1>
+    <p class="sub">Live Signal Dashboard</p>
+
+    <label>Currency Pair</label>
+    <select id="pair">
+      <option value="EUR/USD">EUR/USD</option>
+      <option value="GBP/USD">GBP/USD</option>
+      <option value="USD/JPY">USD/JPY</option>
+      <option value="AUD/USD">AUD/USD</option>
+      <option value="USD/CAD">USD/CAD</option>
+      <option value="EUR/GBP">EUR/GBP</option>
+    </select>
+
+    <label>Expiry</label>
+    <select id="expiry">
+      <option value="1 Minute">1 Minute</option>
+      <option value="2 Minutes">2 Minutes</option>
+      <option value="5 Minutes">5 Minutes</option>
+      <option value="15 Minutes">15 Minutes</option>
+    </select>
+
+    <button onclick="generateSignal()">GENERATE SIGNAL</button>
+
+    <div id="result"><div id="status">● LIVE MARKET</div>
+      <div id="signal">—</div><div id="timer">Next analysis: 60s</div>
+      <div id="confidence">Confidence: —</div>
+    </div>
+
+    <p class="warning">
+      ⚠️ Signals are not guaranteed. Always verify market conditions.
+    </p>
+
+    <h2>Signal History</h2>
+    <div id="history"></div>
+  </div>
+
+  <script src="script.js"></script>
+<section id="settings-panel" class="settings-panel">
+  <h2>⚙️ Settings</h2>
+
+  <div class="setting-row">
+    <span>🔔 Signal Notifications</span>
+    <input type="checkbox" checked>
+  </div>
+
+  <div class="setting-row">
+    <span>📳 Auto Refresh</span>
+    <input type="checkbox" checked>
+  </div>
+
+  <div class="setting-row">
+    <span>📈 Default Pair</span>
+    <select>
+      <option>EUR/USD</option>
+      <option>GBP/USD</option>
+      <option>USD/JPY</option>
+    </select>
+  </div>
+</section>
+</body>
+</html>
