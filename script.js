@@ -1,250 +1,736 @@
-const API_KEY = "YOUR_NEW_API_KEY";
+const signalBtn = document.getElementById("signalBtn");
+const signalBox = document.getElementById("signal");
+const confidenceBox = document.getElementById("confidence");
+const detailsBox = document.getElementById("signalDetails");
 
+const confidenceFill =
+  document.getElementById("confidenceFill");
 
-// ===============================
-// GENERATE SIGNAL
-// ===============================
-function generateSignal() {
+const countdownBox =
+  document.getElementById("countdown");
 
-  const pair = document.getElementById("pair").value;
-  const expiry = document.getElementById("expiry").value;
+let countdownTimer = null;
 
-  const signal = document.getElementById("signal");
-  const confidence = document.getElementById("confidence");
-  const history = document.getElementById("history");
+const pairSelect = document.getElementById("pair");
+const expirySelect = document.getElementById("expiry");
+const historyList = document.getElementById("historyList");
 
-  signal.textContent = "ANALYZING...";
-  confidence.textContent = "Getting market data...";
+const totalSignalsBox = document.getElementById("totalSignals");
+const winsBox = document.getElementById("wins");
+const lossesBox = document.getElementById("losses");
+const winRateBox = document.getElementById("winRate");
 
-  const url =
-    "https://api.twelvedata.com/time_series" +
-    "?symbol=" + encodeURIComponent(pair) +
-    "&interval=1min" +
-    "&outputsize=30" +
-    "&apikey=" + API_KEY;
+const WORKER_URL =
+  "https://shrill-mud-c417.malikmoizm647.workers.dev";
 
-  fetch(url)
-    .then(response => response.json())
-    .then(data => {
+let history = [];
 
-      if (!data.values) {
-        throw new Error(
-          data.message || "Market data unavailable"
-        );
-      }
 
-      const candles = [...data.values].reverse();
+// ==========================================
+// LOAD SAVED HISTORY
+// ==========================================
 
-      const closes =
-        candles.map(c => Number(c.close));
+try {
 
-      if (closes.length < 21) {
-        throw new Error("Not enough market data");
-      }
+  const savedHistory =
+    localStorage.getItem("malikSignalsHistory");
 
-      const price =
-        closes[closes.length - 1];
+  if (savedHistory) {
+    history = JSON.parse(savedHistory);
+  }
 
-      const ema9 =
-        calculateEMA(closes, 9);
+} catch (error) {
 
-      const ema21 =
-        calculateEMA(closes, 21);
-
-      const rsi =
-        calculateRSI(closes, 14);
-
-
-      // ===============================
-      // SIGNAL LOGIC
-      // ===============================
-
-      let result = "WAIT";
-      let confidenceValue = 50;
-
-      if (
-        ema9 > ema21 &&
-        rsi >= 50 &&
-        rsi < 70
-      ) {
-
-        result = "CALL ↑";
-        confidenceValue = 75;
-
-      }
-
-      else if (
-        ema9 < ema21 &&
-        rsi <= 50 &&
-        rsi > 30
-      ) {
-
-        result = "PUT ↓";
-        confidenceValue = 75;
-
-      }
-
-      else if (ema9 > ema21) {
-
-        result = "CALL ↑";
-        confidenceValue = 65;
-
-      }
-
-      else if (ema9 < ema21) {
-
-        result = "PUT ↓";
-        confidenceValue = 65;
-
-      }
-
-
-      // ===============================
-      // DISPLAY SIGNAL
-      // ===============================
-
-      signal.textContent = result;
-sendSignalNotification(
-  result,
-  pair,
-  confidenceValue
-);
-      signal.className = "";
-
-
-      if (result === "CALL ↑") {
-
-        signal.classList.add(
-          "call-signal"
-        );
-
-      }
-
-      else if (result === "PUT ↓") {
-
-        signal.classList.add(
-          "put-signal"
-        );
-
-      }
-
-      else {
-
-        signal.classList.add(
-          "wait-signal"
-        );
-
-      }
-
-
-      confidence.textContent =
-        "Pair: " + pair +
-        " • Expiry: " + expiry +
-        " • Price: " + price.toFixed(5) +
-        " • EMA9: " + ema9.toFixed(5) +
-        " • EMA21: " + ema21.toFixed(5) +
-        " • RSI: " + rsi.toFixed(1) +
-        " • Confidence: " +
-        confidenceValue + "%";
-
-
-      // ===============================
-      // SAVE HISTORY
-      // ===============================
-
-      const time =
-        new Date().toLocaleTimeString();
-
-      const historyText =
-        time +
-        " | " +
-        pair +
-        " | " +
-        result +
-        " | " +
-        confidenceValue +
-        "%";
-
-
-      const item =
-        document.createElement("div");
-
-      item.className =
-        "history-item";
-
-
-      item.innerHTML = `
-        <span>${time}</span>
-        <span>${pair}</span>
-        <span>${result}</span>
-        <span>${confidenceValue}%</span>
-      `;
-
-
-      history.prepend(item);
-
-      saveHistory(historyText);
-
-
-      // ===============================
-      // CHECK RESULT AFTER EXPIRY
-      // ===============================
-
-      if (result !== "WAIT") {
-
-        setTimeout(() => {
-
-          checkSignalResult(
-            pair,
-            result,
-            price
-          );
-
-        }, getExpiryMilliseconds(expiry));
-
-      }
-
-    })
-
-
-    .catch(error => {
-
-      signal.textContent =
-        "DATA ERROR";
-
-      confidence.textContent =
-        error.message;
-
-      console.log(error);
-
-    });
+  console.error("History load error:", error);
+  history = [];
 
 }
 
 
-// ===============================
+// ==========================================
+// SAVE HISTORY
+// ==========================================
+
+function saveHistory() {
+
+  try {
+
+    const cleanHistory =
+      history.map(function(item) {
+
+        return {
+          pair: item.pair,
+          direction: item.direction,
+          confidence: item.confidence,
+          entryPrice: item.entryPrice,
+          expiry: item.expiry,
+          result: item.result,
+          exitPrice: item.exitPrice || null,
+          time: item.time,
+          expiresAt: item.expiresAt
+        };
+
+      });
+
+    localStorage.setItem(
+      "malikSignalsHistory",
+      JSON.stringify(cleanHistory)
+    );
+
+  } catch (error) {
+
+    console.error(
+      "History save error:",
+      error
+    );
+
+  }
+
+}
+
+
+// ==========================================
+// LOAD HISTORY
+// ==========================================
+
+function loadHistory() {
+
+  historyList.innerHTML = "";
+
+  if (!history || history.length === 0) {
+
+    const empty =
+      document.createElement("div");
+
+    empty.className =
+      "empty-history";
+
+    empty.innerText =
+      "No signals yet.";
+
+    historyList.appendChild(empty);
+
+    updateStats();
+
+    return;
+  }
+
+
+  history.forEach(function(trade) {
+
+    renderHistoryItem(trade);
+
+  });
+
+
+  updateStats();
+
+
+  history.forEach(function(trade) {
+
+    if (!trade.result) {
+
+      const remaining =
+        (trade.expiresAt || Date.now()) -
+        Date.now();
+
+
+      if (remaining <= 0) {
+
+        checkResult(trade);
+
+      } else {
+
+        startCountdown(trade);
+
+      }
+
+    }
+
+  });
+
+}
+
+
+// ==========================================
+// RENDER HISTORY ITEM
+// ==========================================
+
+function renderHistoryItem(trade) {
+
+  const item =
+    document.createElement("div");
+
+  item.className =
+  "history-item " +
+  (trade.direction === "CALL ↑"
+    ? "call-history"
+    : "put-history");
+  
+
+
+  let resultText =
+    "⏳ Waiting...";
+
+
+  if (trade.result === "WIN") {
+
+    resultText =
+      "✅ WIN";
+
+  } else if (trade.result === "LOSS") {
+
+    resultText =
+      "❌ LOSS";
+
+  } else if (trade.result === "DRAW") {
+
+    resultText =
+      "➖ DRAW";
+
+  }
+
+
+  if (trade.exitPrice) {
+
+    resultText +=
+      " • Exit: " +
+      Number(trade.exitPrice).toFixed(5);
+
+  }
+
+
+  item.innerHTML =
+    "<strong>" +
+    (trade.time || "") +
+    "</strong> • " +
+    trade.pair +
+    " • " +
+    trade.direction +
+    "<br>Confidence: " +
+    trade.confidence +
+    "%" +
+    " • Entry: " +
+    Number(trade.entryPrice).toFixed(5) +
+    "<br>Expiry: " +
+    trade.expiry +
+    " Minute" +
+    "<br><b class='trade-result'>" +
+    resultText +
+    "</b>";
+
+
+  trade.element =
+    item;
+
+
+  historyList.prepend(item);
+
+}
+
+
+// ==========================================
+// START COUNTDOWN
+// ==========================================
+
+function startCountdown(trade) {
+
+  if (!countdownBox) {
+    return;
+  }
+
+
+  if (countdownTimer) {
+
+    clearInterval(countdownTimer);
+
+    countdownTimer = null;
+
+  }
+
+
+  function updateCountdown() {
+
+    const remaining =
+      Math.max(
+        0,
+        trade.expiresAt - Date.now()
+      );
+
+
+    const totalSeconds =
+      Math.ceil(
+        remaining / 1000
+      );
+
+
+    const minutes =
+      Math.floor(
+        totalSeconds / 60
+      );
+
+
+    const seconds =
+      totalSeconds % 60;
+
+
+    countdownBox.innerText =
+      "⏳ Expiry: " +
+      minutes +
+      ":" +
+      String(seconds).padStart(2, "0");
+
+
+    if (remaining <= 0) {
+
+      clearInterval(countdownTimer);
+
+      countdownTimer = null;
+
+      countdownBox.innerText =
+        "🔄 Checking result...";
+
+      checkResult(trade);
+
+    }
+
+  }
+
+
+  updateCountdown();
+
+
+  countdownTimer =
+    setInterval(
+      updateCountdown,
+      1000
+    );
+
+}
+
+
+// ==========================================
+// GENERATE SIGNAL
+// ==========================================
+
+async function generateSignal() {
+
+  const pair =
+    pairSelect.value;
+
+
+  const expiry =
+    Number(
+      expirySelect.value
+    );
+
+
+  signalBtn.disabled =
+    true;
+
+
+  signalBtn.innerText =
+    "ANALYZING...";
+
+
+  signalBox.innerText =
+    "WAIT";
+
+
+  signalBox.style.color =
+    "#ffffff";
+
+
+  signalBox.style.textShadow =
+    "none";
+
+
+  confidenceBox.innerText =
+    "Analyzing market...";
+
+
+  if (confidenceFill) {
+
+    confidenceFill.style.width =
+      "0%";
+
+  }
+
+
+  if (countdownBox) {
+
+    countdownBox.innerText =
+      "⏳ Waiting for signal";
+
+  }
+
+
+  detailsBox.innerText =
+    "Getting real market data...";
+
+
+  try {
+
+    const response =
+      await fetch(
+        WORKER_URL +
+        "?symbol=" +
+        encodeURIComponent(pair) +
+        "&t=" +
+        Date.now()
+      );
+
+
+    const data =
+      await response.json();
+
+
+    if (!response.ok) {
+
+      throw new Error(
+        "Worker HTTP Error: " +
+        response.status
+      );
+
+    }
+
+
+    if (data.status === "error") {
+
+      throw new Error(
+        data.message ||
+        data.error ||
+        "Market data error"
+      );
+
+    }
+
+
+    if (
+      !data.values ||
+      data.values.length < 21
+    ) {
+
+      throw new Error(
+        "Not enough market data"
+      );
+
+    }
+
+
+    const candles =
+      data.values;
+
+
+    const closes =
+      candles
+        .slice()
+        .reverse()
+        .map(function(candle) {
+
+          return Number(
+            candle.close
+          );
+
+        });
+
+
+    const price =
+      closes[
+        closes.length - 1
+      ];
+
+
+    const ema9 =
+      calculateEMA(
+        closes,
+        9
+      );
+
+
+    const ema21 =
+      calculateEMA(
+        closes,
+        21
+      );
+
+
+    const rsi =
+      calculateRSI(
+        closes,
+        14
+      );
+
+
+    let direction;
+
+
+    if (
+      ema9 > ema21 &&
+      rsi < 70
+    ) {
+
+      direction =
+        "CALL ↑";
+
+    } else if (
+      ema9 < ema21 &&
+      rsi > 30
+    ) {
+
+      direction =
+        "PUT ↓";
+
+    } else {
+
+      direction =
+        ema9 >= ema21
+          ? "CALL ↑"
+          : "PUT ↓";
+
+    }
+
+
+    let confidence =
+      70;
+
+
+    if (
+      direction === "CALL ↑"
+    ) {
+
+      if (ema9 > ema21) {
+
+        confidence += 5;
+
+      }
+
+
+      if (
+        rsi >= 45 &&
+        rsi <= 65
+      ) {
+
+        confidence += 5;
+
+      }
+
+    } else {
+
+      if (ema9 < ema21) {
+
+        confidence += 5;
+
+      }
+
+
+      if (
+        rsi >= 35 &&
+        rsi <= 55
+      ) {
+
+        confidence += 5;
+
+      }
+
+    }
+
+
+    confidence =
+      Math.min(
+        confidence,
+        85
+      );
+
+
+    // ======================================
+    // SIGNAL COLOR
+    // ======================================
+
+    signalBox.innerText =
+      direction;
+
+
+    if (
+      direction.includes("CALL")
+    ) {
+
+      signalBox.style.color =
+        "#00d084";
+
+      signalBox.style.textShadow =
+        "0 0 18px rgba(0, 208, 132, 0.35)";
+
+    } else {
+
+      signalBox.style.color =
+        "#ff5c5c";
+
+      signalBox.style.textShadow =
+        "0 0 18px rgba(255, 92, 92, 0.35)";
+
+    }
+
+
+    // ======================================
+    // CONFIDENCE
+    // ======================================
+
+    confidenceBox.innerText =
+      "Confidence: " +
+      confidence +
+      "%";
+
+
+    if (confidenceFill) {
+
+      confidenceFill.style.width =
+        confidence +
+        "%";
+
+
+      if (
+        direction.includes("CALL")
+      ) {
+
+        confidenceFill.style.background =
+          "#00d084";
+
+      } else {
+
+        confidenceFill.style.background =
+          "#ff5c5c";
+
+      }
+
+    }
+
+
+    // ======================================
+    // DETAILS
+    // ======================================
+
+    detailsBox.innerHTML =
+      "Pair: " +
+      pair +
+      " • Expiry: " +
+      expiry +
+      " Minute" +
+      "<br>Entry Price: " +
+      price.toFixed(5) +
+      "<br>EMA9: " +
+      ema9.toFixed(5) +
+      " • EMA21: " +
+      ema21.toFixed(5) +
+      "<br>RSI: " +
+      rsi.toFixed(1) +
+      "<br><b>Result: Waiting...</b>";
+
+
+    // ======================================
+    // ADD HISTORY
+    // ======================================
+
+    addHistory(
+      pair,
+      direction,
+      confidence,
+      price,
+      expiry
+    );
+
+
+  } catch (error) {
+
+    signalBox.innerText =
+      "ERROR";
+
+
+    signalBox.style.color =
+      "#ff5c5c";
+
+
+    signalBox.style.textShadow =
+      "none";
+
+
+    confidenceBox.innerText =
+      "Could not generate signal";
+
+
+    if (confidenceFill) {
+
+      confidenceFill.style.width =
+        "0%";
+
+    }
+
+
+    detailsBox.innerText =
+      error.message ||
+      "Unknown error";
+
+
+    if (countdownBox) {
+
+      countdownBox.innerText =
+        "⚠️ Signal unavailable";
+
+    }
+
+
+    console.error(
+      "Signal error:",
+      error
+    );
+
+  }
+
+
+  signalBtn.disabled =
+    false;
+
+
+  signalBtn.innerText =
+    "GENERATE SIGNAL";
+
+}
+
+
+// ==========================================
 // EMA
-// ===============================
+// ==========================================
+
 function calculateEMA(
-  values,
+  prices,
   period
 ) {
 
   const multiplier =
     2 / (period + 1);
 
+
   let ema =
-    values[0];
+    prices
+      .slice(0, period)
+      .reduce(
+        function(a, b) {
+
+          return a + b;
+
+        },
+        0
+      ) / period;
 
 
   for (
-    let i = 1;
-    i < values.length;
+    let i = period;
+    i < prices.length;
     i++
   ) {
 
     ema =
-      (values[i] - ema) *
+      (prices[i] - ema) *
       multiplier +
       ema;
 
@@ -256,11 +742,12 @@ function calculateEMA(
 }
 
 
-// ===============================
+// ==========================================
 // RSI
-// ===============================
+// ==========================================
+
 function calculateRSI(
-  values,
+  prices,
   period
 ) {
 
@@ -275,42 +762,40 @@ function calculateRSI(
   ) {
 
     const change =
-      values[i] -
-      values[i - 1];
+      prices[i] -
+      prices[i - 1];
 
 
     if (change >= 0) {
 
       gains += change;
 
-    }
+    } else {
 
-    else {
-
-      losses +=
-        Math.abs(change);
+      losses -= change;
 
     }
 
   }
 
 
-  let avgGain =
+  let averageGain =
     gains / period;
 
-  let avgLoss =
+
+  let averageLoss =
     losses / period;
 
 
   for (
     let i = period + 1;
-    i < values.length;
+    i < prices.length;
     i++
   ) {
 
     const change =
-      values[i] -
-      values[i - 1];
+      prices[i] -
+      prices[i - 1];
 
 
     const gain =
@@ -321,27 +806,29 @@ function calculateRSI(
 
     const loss =
       change < 0
-        ? Math.abs(change)
+        ? -change
         : 0;
 
 
-    avgGain =
+    averageGain =
       (
-        avgGain * (period - 1) +
+        averageGain *
+        (period - 1) +
         gain
       ) / period;
 
 
-    avgLoss =
+    averageLoss =
       (
-        avgLoss * (period - 1) +
+        averageLoss *
+        (period - 1) +
         loss
       ) / period;
 
   }
 
 
-  if (avgLoss === 0) {
+  if (averageLoss === 0) {
 
     return 100;
 
@@ -349,65 +836,529 @@ function calculateRSI(
 
 
   const rs =
-    avgGain / avgLoss;
+    averageGain /
+    averageLoss;
 
 
   return (
     100 -
-    (100 / (1 + rs))
+    100 / (1 + rs)
   );
 
 }
 
 
-// ===============================
-// NAVIGATION
-// ===============================
-function showPage(
-  page,
-  button
+// ==========================================
+// ADD HISTORY
+// ==========================================
+
+function addHistory(
+  pair,
+  direction,
+  confidence,
+  entryPrice,
+  expiry
 ) {
 
-  document
-    .querySelectorAll(".nav-item")
-    .forEach(item => {
-
-      item.classList.remove(
-        "active"
-      );
-
-    });
-
-
-  button.classList.add(
-    "active"
-  );
-
-
-  const settings =
-    document.getElementById(
-      "settings-panel"
+  const empty =
+    document.querySelector(
+      ".empty-history"
     );
 
 
-  if (settings) {
+  if (empty) {
 
-    settings.style.display =
-      page === "settings"
-        ? "block"
-        : "none";
+    empty.remove();
 
   }
 
 
+  const now =
+    new Date();
+
+
+  const time =
+    now.toLocaleTimeString(
+      [],
+      {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit"
+      }
+    );
+
+
+  const trade = {
+
+    pair: pair,
+
+    direction: direction,
+
+    confidence: confidence,
+
+    entryPrice: entryPrice,
+
+    expiry: expiry,
+
+    result: null,
+
+    exitPrice: null,
+
+    time: time,
+
+    expiresAt:
+      Date.now() +
+      expiry * 60 * 1000,
+
+    element: null
+
+  };
+
+
+  history.push(trade);
+
+
+  renderHistoryItem(trade);
+
+
+  saveHistory();
+
+
+  updateStats();
+
+
+  startCountdown(trade);
+
+}
+
+
+// ==========================================
+// CHECK RESULT
+// ==========================================
+
+async function checkResult(trade) {
+
+  if (trade.result) {
+
+    return;
+
+  }
+
+
+  const resultBox =
+    trade.element
+      ? trade.element.querySelector(
+          ".trade-result"
+        )
+      : null;
+
+
+  if (resultBox) {
+
+    resultBox.innerText =
+      "🔄 Checking result...";
+
+  }
+
+
+  let lastError =
+    "Unknown error";
+
+
+  for (
+    let attempt = 1;
+    attempt <= 3;
+    attempt++
+  ) {
+
+    try {
+
+      const response =
+        await fetch(
+          WORKER_URL +
+          "?symbol=" +
+          encodeURIComponent(
+            trade.pair
+          ) +
+          "&t=" +
+          Date.now()
+        );
+
+
+      if (!response.ok) {
+
+        throw new Error(
+          "Worker HTTP Error: " +
+          response.status
+        );
+
+      }
+
+
+      const data =
+        await response.json();
+
+
+      if (data.status === "error") {
+
+        throw new Error(
+          data.message ||
+          data.error ||
+          "Market API error"
+        );
+
+      }
+
+
+      if (
+        !data.values ||
+        data.values.length === 0
+      ) {
+
+        throw new Error(
+          "No candle data received"
+        );
+
+      }
+
+
+      const exitPrice =
+        Number(
+          data.values[0].close
+        );
+
+
+      if (!Number.isFinite(exitPrice)) {
+
+        throw new Error(
+          "Invalid exit price"
+        );
+
+      }
+
+
+      let result;
+
+
+      if (
+        exitPrice >
+        trade.entryPrice
+      ) {
+
+        result =
+          trade.direction === "CALL ↑"
+            ? "WIN"
+            : "LOSS";
+
+      } else if (
+        exitPrice <
+        trade.entryPrice
+      ) {
+
+        result =
+          trade.direction === "PUT ↓"
+            ? "WIN"
+            : "LOSS";
+
+      } else {
+
+        result =
+          "DRAW";
+
+      }
+
+
+      trade.result =
+        result;
+
+
+      trade.exitPrice =
+        exitPrice;
+
+
+      if (resultBox) {
+
+        resultBox.classList.remove(
+          "win-result",
+          "loss-result",
+          "draw-result"
+        );
+
+
+        if (result === "WIN") {
+
+          resultBox.innerText =
+            "✅ WIN • Exit: " +
+            exitPrice.toFixed(5);
+
+          resultBox.classList.add(
+            "win-result"
+          );
+
+        } else if (result === "LOSS") {
+
+          resultBox.innerText =
+            "❌ LOSS • Exit: " +
+            exitPrice.toFixed(5);
+
+          resultBox.classList.add(
+            "loss-result"
+          );
+
+        } else {
+
+          resultBox.innerText =
+            "➖ DRAW • Exit: " +
+            exitPrice.toFixed(5);
+
+          resultBox.classList.add(
+            "draw-result"
+          );
+
+        }
+
+      }
+
+
+      if (countdownBox) {
+
+        countdownBox.innerText =
+          "✅ Result checked";
+
+      }
+
+
+      saveHistory();
+
+
+      updateStats();
+
+
+      return;
+
+
+    } catch (error) {
+
+      lastError =
+        error.message ||
+        "Result check failed";
+
+
+      console.error(
+        "Result attempt " +
+        attempt +
+        ":",
+        error
+      );
+
+
+      if (attempt < 3) {
+
+        if (resultBox) {
+
+          resultBox.innerText =
+            "🔄 Retrying... " +
+            attempt +
+            "/3";
+
+        }
+
+
+        await new Promise(
+          function(resolve) {
+
+            setTimeout(
+              resolve,
+              5000
+            );
+
+          }
+        );
+
+      }
+
+    }
+
+  }
+
+
+  if (resultBox) {
+
+    resultBox.innerText =
+      "⚠️ " +
+      lastError;
+
+  }
+
+
+  if (countdownBox) {
+
+    countdownBox.innerText =
+      "⚠️ Result check failed";
+
+  }
+
+}
+
+
+// ==========================================
+// UPDATE STATS
+// ==========================================
+
+function updateStats() {
+
+  const completed =
+    history.filter(
+      function(item) {
+
+        return (
+          item.result === "WIN" ||
+          item.result === "LOSS"
+        );
+
+      }
+    );
+
+
+  const wins =
+    history.filter(
+      function(item) {
+
+        return item.result === "WIN";
+
+      }
+    ).length;
+
+
+  const losses =
+    history.filter(
+      function(item) {
+
+        return item.result === "LOSS";
+
+      }
+    ).length;
+
+
+  totalSignalsBox.innerText =
+    history.length;
+
+
+  winsBox.innerText =
+    wins;
+
+
+  lossesBox.innerText =
+    losses;
+
+
+  if (completed.length > 0) {
+
+    const rate =
+      Math.round(
+        (wins / completed.length) *
+        100
+      );
+
+
+    winRateBox.innerText =
+      rate +
+      "%";
+
+  } else {
+
+    winRateBox.innerText =
+      "0%";
+
+  }
+
+
+  saveHistory();
+
+}
+
+
+// ==========================================
+// CLEAR HISTORY
+// ==========================================
+
+function clearHistory() {
+
+  const confirmClear =
+    confirm(
+      "Are you sure you want to delete all signal history?"
+    );
+
+
+  if (!confirmClear) {
+
+    return;
+
+  }
+
+
+  history = [];
+
+
+  localStorage.removeItem(
+    "malikSignalsHistory"
+  );
+
+
+  if (countdownTimer) {
+
+    clearInterval(countdownTimer);
+
+    countdownTimer = null;
+
+  }
+
+
+  historyList.innerHTML =
+    "";
+
+
+  const empty =
+    document.createElement("p");
+
+
+  empty.className =
+    "empty-history";
+
+
+  empty.innerText =
+    "No signals yet.";
+
+
+  historyList.appendChild(
+    empty
+  );
+
+
+  if (countdownBox) {
+
+    countdownBox.innerText =
+      "⏳ Waiting for signal";
+
+  }
+
+
+  updateStats();
+
+}
+
+
+// ==========================================
+// PAGE NAVIGATION
+// ==========================================
+
+function showPage(page) {
+
   if (page === "home") {
 
     window.scrollTo({
-
       top: 0,
-
       behavior: "smooth"
-
     });
 
   }
@@ -415,629 +1366,92 @@ function showPage(
 
   if (page === "signals") {
 
-    document
-      .getElementById("signal")
-      .scrollIntoView({
-
-        behavior: "smooth"
-
-      });
+    window.scrollTo({
+      top: 250,
+      behavior: "smooth"
+    });
 
   }
 
 
   if (page === "history") {
 
-    document
-      .getElementById("history")
-      .scrollIntoView({
+    const historySection =
+      document.querySelector(
+        ".history"
+      );
 
+
+    if (historySection) {
+
+      historySection.scrollIntoView({
         behavior: "smooth"
-
       });
 
-  }
-
-
-  if (
-    page === "settings" &&
-    settings
-  ) {
-
-    settings.scrollIntoView({
-
-      behavior: "smooth"
-
-    });
-
-  }
-
-}
-
-
-// ===============================
-// EXPIRY TIME
-// ===============================
-function getExpiryMilliseconds(
-  expiry
-) {
-
-  if (expiry === "1 Minute") {
-
-    return 60 * 1000;
-
-  }
-
-
-  if (expiry === "2 Minutes") {
-
-    return 2 * 60 * 1000;
-
-  }
-
-
-  if (expiry === "5 Minutes") {
-
-    return 5 * 60 * 1000;
-
-  }
-
-
-  if (expiry === "15 Minutes") {
-
-    return 15 * 60 * 1000;
-
-  }
-
-
-  return 60 * 1000;
-
-}
-
-
-// ===============================
-// CHECK SIGNAL RESULT
-// ===============================
-function checkSignalResult(
-  pair,
-  signalResult,
-  entryPrice
-) {
-
-  const url =
-    "https://api.twelvedata.com/time_series" +
-    "?symbol=" +
-    encodeURIComponent(pair) +
-    "&interval=1min" +
-    "&outputsize=2" +
-    "&apikey=" +
-    API_KEY;
-
-
-  fetch(url)
-
-    .then(response =>
-      response.json()
-    )
-
-    .then(data => {
-
-      if (
-        !data.values ||
-        !data.values.length
-      ) {
-
-        console.log(
-          "Unable to check result"
-        );
-
-        return;
-
-      }
-
-
-      const latestPrice =
-        Number(
-          data.values[0].close
-        );
-
-
-      let resultText =
-        "DRAW";
-
-
-      if (
-        signalResult ===
-        "CALL ↑"
-      ) {
-
-        if (
-          latestPrice >
-          entryPrice
-        ) {
-
-          resultText =
-            "WIN";
-
-        }
-
-        else if (
-          latestPrice <
-          entryPrice
-        ) {
-
-          resultText =
-            "LOSS";
-
-        }
-
-      }
-
-
-      if (
-        signalResult ===
-        "PUT ↓"
-      ) {
-
-        if (
-          latestPrice <
-          entryPrice
-        ) {
-
-          resultText =
-            "WIN";
-
-        }
-
-        else if (
-          latestPrice >
-          entryPrice
-        ) {
-
-          resultText =
-            "LOSS";
-
-        }
-
-      }
-
-
-      const history =
-        document.getElementById(
-          "history"
-        );
-
-
-      const resultItem =
-        document.createElement(
-          "div"
-        );
-
-
-      resultItem.className =
-        "history-item";
-
-
-      resultItem.innerHTML = `
-        <span>${new Date().toLocaleTimeString()}</span>
-        <span>${pair}</span>
-        <span>${signalResult}</span>
-        <span class="${
-          resultText === "WIN"
-            ? "result-win"
-            : "result-loss"
-        }">
-          ${resultText}
-        </span>
-      `;
-
-
-      history.prepend(
-        resultItem
-      );
-
-
-      saveHistory(
-
-        pair +
-        " | " +
-        signalResult +
-        " | " +
-        resultText +
-        " | Entry: " +
-        entryPrice.toFixed(5) +
-        " | Exit: " +
-        latestPrice.toFixed(5)
-
-      );
-
-
-      if (
-        resultText === "WIN" ||
-        resultText === "LOSS"
-      ) {
-
-        updateStats(
-          resultText
-        );
-
-      }
-
-    })
-
-    .catch(error => {
-
-      console.log(
-        "Result check error:",
-        error
-      );
-
-    });
-
-}
-
-
-// ===============================
-// UPDATE STATS
-// ===============================
-function updateStats(
-  resultText
-) {
-
-  let wins =
-    Number(
-      localStorage.getItem(
-        "wins"
-      )
-    ) || 0;
-
-
-  let losses =
-    Number(
-      localStorage.getItem(
-        "losses"
-      )
-    ) || 0;
-
-
-  if (
-    resultText === "WIN"
-  ) {
-
-    wins++;
-
-  }
-
-
-  if (
-    resultText === "LOSS"
-  ) {
-
-    losses++;
-
-  }
-
-
-  const total =
-    wins + losses;
-
-
-  localStorage.setItem(
-    "totalSignals",
-    total
-  );
-
-
-  localStorage.setItem(
-    "wins",
-    wins
-  );
-
-
-  localStorage.setItem(
-    "losses",
-    losses
-  );
-
-
-  updateStatsDisplay();
-
-}
-
-
-// ===============================
-// DISPLAY STATS
-// ===============================
-function updateStatsDisplay() {
-
-  const totalEl =
-    document.getElementById(
-      "totalSignals"
-    );
-
-  const winsEl =
-    document.getElementById(
-      "wins"
-    );
-
-  const lossesEl =
-    document.getElementById(
-      "losses"
-    );
-
-  const rateEl =
-    document.getElementById(
-      "winRate"
-    );
-
-
-  const total =
-    Number(
-      localStorage.getItem(
-        "totalSignals"
-      )
-    ) || 0;
-
-
-  const wins =
-    Number(
-      localStorage.getItem(
-        "wins"
-      )
-    ) || 0;
-
-
-  const losses =
-    Number(
-      localStorage.getItem(
-        "losses"
-      )
-    ) || 0;
-
-
-  const completed =
-    wins + losses;
-
-
-  const winRate =
-    completed > 0
-      ? Math.round(
-          (wins / completed) * 100
-        )
-      : 0;
-
-
-  if (totalEl) {
-
-    totalEl.textContent =
-      total;
-
-  }
-
-
-  if (winsEl) {
-
-    winsEl.textContent =
-      wins;
-
-  }
-
-
-  if (lossesEl) {
-
-    lossesEl.textContent =
-      losses;
-
-  }
-
-
-  if (rateEl) {
-
-    rateEl.textContent =
-      winRate + "%";
-
-  }
-
-}
-
-
-// ===============================
-// SAVE HISTORY
-// ===============================
-function saveHistory(text) {
-
-  let historyData =
-    JSON.parse(
-      localStorage.getItem(
-        "signalHistory"
-      )
-    ) || [];
-
-
-  historyData.unshift(
-    text
-  );
-
-
-  historyData =
-    historyData.slice(
-      0,
-      50
-    );
-
-
-  localStorage.setItem(
-
-    "signalHistory",
-
-    JSON.stringify(
-      historyData
-    )
-
-  );
-
-}
-
-
-// ===============================
-// LOAD HISTORY
-// ===============================
-function loadHistory() {
-
-  const history =
-    document.getElementById(
-      "history"
-    );
-
-
-  if (!history) return;
-
-
-  history.innerHTML =
-    "";
-
-
-  const historyData =
-    JSON.parse(
-      localStorage.getItem(
-        "signalHistory"
-      )
-    ) || [];
-
-
-  historyData.forEach(
-    text => {
-
-      const item =
-        document.createElement(
-          "div"
-        );
-
-
-      item.className =
-        "history-item";
-
-
-      item.textContent =
-        text;
-
-
-      history.appendChild(
-        item
-      );
-
     }
-  );
 
-}
-
-
-// ===============================
-// DEFAULT PAIR
-// ===============================
-document.addEventListener(
-  "DOMContentLoaded",
-  function () {
-
-    updateStatsDisplay();
-
-    loadHistory();
+  }
 
 
-    const pairSelect =
-      document.getElementById(
-        "pair"
+  if (page === "settings") {
+
+    const settingsSection =
+      document.querySelector(
+        ".settings"
       );
 
 
-    const settingsPair =
-      document.getElementById(
-        "settingsPair"
-      );
+    if (settingsSection) {
 
-
-    if (
-      pairSelect &&
-      settingsPair
-    ) {
-
-      const savedPair =
-        localStorage.getItem(
-          "defaultPair"
-        ) || "EUR/USD";
-
-
-      pairSelect.value =
-        savedPair;
-
-
-      settingsPair.value =
-        savedPair;
-
-
-      settingsPair.addEventListener(
-        "change",
-        function () {
-
-          localStorage.setItem(
-            "defaultPair",
-            this.value
-          );
-
-
-          pairSelect.value =
-            this.value;
-
-        }
-      );
+      settingsSection.scrollIntoView({
+        behavior: "smooth"
+      });
 
     }
 
   }
-);// ===============================
-// SIGNAL NOTIFICATIONS
-// ===============================
-function sendSignalNotification(signal, pair, confidence) {
 
-  const notificationToggle =
-    document.getElementById("signalNotifications");
-
-  if (!notificationToggle || !notificationToggle.checked) {
-    return;
-  }
-
-  if (!("Notification" in window)) {
-    return;
-  }
-
-  if (Notification.permission === "granted") {
-
-    new Notification("⚡ Malik Signals", {
-      body:
-        pair +
-        " → " +
-        signal +
-        "\nConfidence: " +
-        confidence +
-        "%"
-    });
-
-  }
 }
 
 
-// Request notification permission
-document.addEventListener("DOMContentLoaded", function () {
+// ==========================================
+// SETTINGS
+// ==========================================
 
-  const notificationToggle =
-    document.getElementById("signalNotifications");
+const notificationToggle =
+  document.getElementById(
+    "notificationToggle"
+  );
 
-  if (notificationToggle) {
 
-    notificationToggle.addEventListener("change", function () {
+const autoRefreshToggle =
+  document.getElementById(
+    "autoRefreshToggle"
+  );
+
+
+// Signal Notifications setting
+
+if (notificationToggle) {
+
+  notificationToggle.checked =
+    localStorage.getItem(
+      "malikNotifications"
+    ) === "true";
+
+
+  notificationToggle.addEventListener(
+    "change",
+    function() {
+
+      localStorage.setItem(
+        "malikNotifications",
+        notificationToggle.checked
+      );
+
 
       if (
-        this.checked &&
+        notificationToggle.checked &&
         "Notification" in window &&
         Notification.permission === "default"
       ) {
@@ -1046,8 +1460,76 @@ document.addEventListener("DOMContentLoaded", function () {
 
       }
 
-    });
+    }
+  );
 
+}
+
+
+// Auto Refresh stays OFF
+
+if (autoRefreshToggle) {
+
+  autoRefreshToggle.checked =
+    false;
+
+
+  autoRefreshToggle.addEventListener(
+    "change",
+    function() {
+
+      autoRefreshToggle.checked =
+        false;
+
+
+      alert(
+        "Auto Refresh is disabled. Signals are generated manually."
+      );
+
+    }
+  );
+
+}
+
+
+// ==========================================
+// SIGNAL NOTIFICATION
+// ==========================================
+function sendSignalNotification(
+  pair,
+  direction,
+  confidence
+) {
+  const notificationsEnabled =
+    localStorage.getItem(
+      "malikNotifications"
+    ) === "true";
+
+  if (!notificationsEnabled) {
+    return;
   }
 
-});
+  if (!("Notification" in window)) {
+    return;
+  }
+
+  if (
+    Notification.permission !==
+    "granted"
+  ) {
+    return;
+  }
+
+  new Notification(
+    "⚡ MALIK SIGNALS",
+    {
+      body:
+        pair +
+        " • " +
+        direction +
+        "\nConfidence: " +
+        confidence +
+        "%"
+    }
+  );
+}
