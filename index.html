@@ -1,9 +1,11 @@
-<!DOCTYPE html>
+  <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <title>Malik Signals</title>
+
   <link rel="stylesheet" href="style.css">
 </head>
 
@@ -11,195 +13,251 @@
 
   <div class="app">
 
-    <header class="top-header">
-      <div class="brand">
-        <div class="logo">M</div>
-        <div>
-          <div class="brand-name">MALIK SIGNALS</div>
-          <div class="brand-sub">AI MARKET ANALYSIS</div>
-        </div>
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">M</div>
+
+      <div>
+        <h1>MALIK SIGNALS</h1>
+        <p>AI MARKET ANALYSIS</p>
       </div>
 
-      <div class="live-badge">
-        <span>●</span> LIVE
-      </div>
+      <span class="live">
+  <i></i>
+  LIVE DATA
+      </span>
     </header>
 
-    <h1>⚡ MALIK SIGNALS</h1>
-    <p class="sub">Live Signal Dashboard</p>
+    <!-- Main -->
+    <main>
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge">⚡ AI POWERED SIGNALS</div>
 
-    <label>Currency Pair</label>
+  <h2>Trade Smarter.</h2>
 
- <select id="settingsPair">
-  <option value="EUR/USD">EUR/USD</option>
-  <option value="GBP/USD">GBP/USD</option>
-  <option value="USD/JPY">USD/JPY</option>
-  <option value="AUD/NZD">AUD/NZD</option>
-  <option value="USD/BRL">USD/BRL</option>
-  <option value="CAD/CHF">CAD/CHF</option>
-  <option value="NZD/USD">NZD/USD</option>
-  <option value="USD/INR">USD/INR</option>
- </select>
-    
->
-    <label>Expiry</label>
+  <p>
+    Analyze live market data and generate
+    technical signals in seconds.
+  </p>
 
-    <select id="expiry">
-      <option value="1 Minute">1 Minute</option>
-      <option value="2 Minutes">2 Minutes</option>
-      <option value="5 Minutes">5 Minutes</option>
-      <option value="15 Minutes">15 Minutes</option>
-    </select>
-
-    <button onclick="generateSignal()">
-      GENERATE SIGNAL
-    </button>
-
-    <div id="result">
-
-      <div id="status">
-        ● LIVE MARKET
-      </div>
-
-      <div id="signal">
-        —
-      </div>
-
-      <div id="timer">
-        Manual analysis mode
-      </div>
-
-      <div id="confidence">
-        Confidence: —
-      </div>
-
-    </div>
-
-    <p class="warning">
-      ⚠️ Signals are not guaranteed. Always verify market conditions.
-    </p>
-
-    <h2>Signal History</h2>
-
-    <div class="history-table">
-
-      <div class="history-header">
-        <span>TIME</span>
-        <span>PAIR</span>
-        <span>SIGNAL</span>
-        <span>CONF.</span>
-      </div>
-
-      <div id="history"></div>
-
-    </div>
-
+  <div class="hero-points">
+    <span>● Live Data</span>
+    <span>● EMA + RSI</span>
+    <span>● Manual Signals</span>
   </div>
+</section>
+      
+<div class="section-heading">
+  <span>📊</span>
+  <div>
+    <strong>Live Market Signal</strong>
+    <small>Choose your pair and expiry</small>
+  </div>
+</div>
+      <!-- Currency Pair -->
+      <label for="pair">Currency Pair</label>
 
-
-  <!-- Bottom Navigation -->
-
-  <nav class="bottom-nav">
-
-    <button
-      class="nav-item active"
-      onclick="showPage('home', this)"
-    >
-      🏠
-      <span>Home</span>
-    </button>
-
-    <button
-      class="nav-item"
-      onclick="showPage('signals', this)"
-    >
-      📊
-      <span>Signals</span>
-    </button>
-
-    <button
-      class="nav-item"
-      onclick="showPage('history', this)"
-    >
-      🕘
-      <span>History</span>
-    </button>
-
-    <button
-      class="nav-item"
-      onclick="showPage('settings', this)"
-    >
-      ⚙️
-      <span>Settings</span>
-    </button>
-
-  </nav>
-
-
-  <!-- Settings -->
-
-  <section
-    id="settings-panel"
-    class="settings-panel"
-  >
-
-    <h2>⚙️ Settings</h2>
-
-    <div class="setting-row">
-
-      <span>
-        🔔 Signal Notifications
-      </span>
-
-      <input
-        type="checkbox"
-        id="signalNotifications"
-        checked
-      >
-
-    </div>
-
-
-    <div class="setting-row">
-
-      <span>
-        📈 Default Pair
-      </span>
-
-      <select id="settingsPair">
-
-        <option value="EUR/USD">
-          EUR/USD
-        </option>
-
-        <option value="GBP/USD">
-          GBP/USD
-        </option>
-
-        <option value="USD/JPY">
-          USD/JPY
-        </option>
-
-        <option value="AUD/USD">
-          AUD/USD
-        </option>
-
-        <option value="USD/CAD">
-          USD/CAD
-        </option>
-
-        <option value="EUR/GBP">
-          EUR/GBP
-        </option>
-
+      <select id="pair">
+        <option value="EUR/USD">EUR/USD</option>
+        <option value="GBP/USD">GBP/USD</option>
+        <option value="USD/JPY">USD/JPY</option>
+        <option value="USD/CHF">USD/CHF</option>
+        <option value="AUD/USD">AUD/USD</option>
+        <option value="USD/CAD">USD/CAD</option>
+        <option value="EUR/JPY">EUR/JPY</option>
+        <option value="GBP/JPY">GBP/JPY</option>
+        <option value="AUD/NZD">AUD/NZD</option>
+        <option value="NZD/USD">NZD/USD</option>
+        <option value="CAD/CHF">CAD/CHF</option>
+        <option value="USD/INR">USD/INR</option>
+        <option value="USD/BRL">USD/BRL</option>
+        <option value="EUR/GBP">EUR/GBP</option>
       </select>
 
+      <!-- Expiry -->
+      <label for="expiry">Expiry Time</label>
+
+      <select id="expiry">
+        <option value="1">1 Minute</option>
+        <option value="2">2 Minutes</option>
+        <option value="5">5 Minutes</option>
+      </select>
+
+      <!-- Generate Button -->
+      <button id="signalBtn" onclick="generateSignal()">
+        GENERATE SIGNAL
+      </button>
+
+      <!-- Signal Result -->
+      <section class="signal-card">
+<div class="analysis-badge">● LIVE ANALYSIS</div>
+        <div id="signal">
+          WAITING FOR SIGNAL
+        </div>
+
+        <div id="confidence">
+  Confidence: --
+</div>
+
+<div class="confidence-bar">
+  <div id="confidenceFill"></div>
+</div>
+
+        <div id="signalDetails">
+          Select a pair and generate a signal.
+        </div>
+<div id="countdown">
+  ⏳ Waiting for signal
+</div>
+      </section>
+
+      <!-- Warning -->
+      <p class="warning">
+  ⚠️ Educational market analysis only. Signals are not guaranteed.
+  Always verify market conditions before making any trading decision.
+      </p>
+
+      <!-- History -->
+      <section class="history">
+
+  <h3>Signal History</h3>
+
+  <button id="clearHistoryBtn" onclick="clearHistory()">
+    🗑️ CLEAR HISTORY
+  </button>
+
+  <div id="historyList">
+    <p class="empty-history">
+      No signals yet.
+    </p>
+  </div>
+
+      </section>
+
+      <!-- Statistics -->
+      <section class="stats">
+
+        <div class="stat">
+          <strong id="totalSignals">0</strong>
+          <span>Total</span>
+        </div>
+
+        <div class="stat">
+          <strong id="wins">0</strong>
+          <span>Wins</span>
+        </div>
+
+        <div class="stat">
+          <strong id="losses">0</strong>
+          <span>Losses</span>
+        </div>
+
+        <div class="stat">
+          <strong id="winRate">0%</strong>
+          <span>Win Rate</span>
+        </div>
+
+      </section>
+<!-- Settings -->
+<section class="settings">
+
+  <h3>⚙️ Settings</h3>
+
+  <div class="setting-item">
+    <div>
+      <strong>Signal Notifications</strong>
+      <p>Get notified when a new signal is generated.</p>
     </div>
 
-  </section>
+    <label class="switch">
+      <input type="checkbox" id="notificationToggle">
+      <span class="slider"></span>
+    </label>
+  </div>
 
+  <div class="setting-item">
+    <div>
+      <strong>Auto Refresh</strong>
+      <p>Automatically refresh market data.</p>
+    </div>
+
+    <label class="switch">
+      <input type="checkbox" id="autoRefreshToggle">
+      <span class="slider"></span>
+    </label>
+  </div>
+
+</section>
+      <!-- About -->
+<section class="about">
+  <h3>ℹ️ About Malik Signals</h3>
+
+  <p>
+    Malik Signals is a market analysis dashboard that uses
+    technical indicators such as EMA9, EMA21 and RSI14
+    to generate directional market signals.
+  </p>
+
+  <div class="about-grid">
+    <div>
+      <strong>EMA9</strong>
+      <span>Short-term trend</span>
+    </div>
+
+    <div>
+      <strong>EMA21</strong>
+      <span>Trend direction</span>
+    </div>
+
+    <div>
+      <strong>RSI14</strong>
+      <span>Momentum</span>
+    </div>
+
+    <div>
+      <strong>Manual</strong>
+      <span>Signal generation</span>
+    </div>
+  </div>
+</section>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+
+      <button onclick="showPage('home')">
+        🏠
+        <span>Home</span>
+      </button>
+
+      <button onclick="showPage('signals')">
+        📊
+        <span>Signals</span>
+      </button>
+
+      <button onclick="showPage('history')">
+        🕘
+        <span>History</span>
+      </button>
+
+      <button onclick="showPage('settings')">
+        ⚙️
+        <span>Settings</span>
+      </button>
+
+    </nav>
+<!-- Footer -->
+<footer class="footer">
+  <strong>⚡ MALIK SIGNALS</strong>
+  <p>AI MARKET ANALYSIS • Live Signal Dashboard</p>
+  <small>© 2026 Malik Signals. For educational purposes only.</small>
+</footer>
+  </div>
 
   <script src="script.js"></script>
 
 </body>
 </html>
+
+        
