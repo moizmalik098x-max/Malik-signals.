@@ -453,7 +453,147 @@ async function generateSignal() {
         closes,
         21
       );
+let direction;
+let signalStrength = "NORMAL";
 
+
+// ======================================
+// TREND + RSI ANALYSIS
+// ======================================
+
+const emaDifference =
+  Math.abs(ema9 - ema21);
+
+const priceAboveEMA =
+  price > ema9 && price > ema21;
+
+const priceBelowEMA =
+  price < ema9 && price < ema21;
+
+
+// ======================================
+// CALL / PUT DECISION
+// ======================================
+
+if (
+  ema9 > ema21 &&
+  rsi >= 45 &&
+  rsi < 70
+) {
+
+  direction = "CALL ↑";
+
+} else if (
+  ema9 < ema21 &&
+  rsi > 30 &&
+  rsi <= 55
+) {
+
+  direction = "PUT ↓";
+
+} else {
+
+  direction =
+    ema9 >= ema21
+      ? "CALL ↑"
+      : "PUT ↓";
+
+}
+
+
+// ======================================
+// CONFIDENCE CALCULATION
+// ======================================
+
+let confidence = 60;
+
+
+// EMA TREND
+if (
+  direction === "CALL ↑" &&
+  ema9 > ema21
+) {
+
+  confidence += 10;
+
+}
+
+if (
+  direction === "PUT ↓" &&
+  ema9 < ema21
+) {
+
+  confidence += 10;
+
+}
+
+
+// PRICE CONFIRMATION
+if (
+  direction === "CALL ↑" &&
+  priceAboveEMA
+) {
+
+  confidence += 10;
+
+}
+
+if (
+  direction === "PUT ↓" &&
+  priceBelowEMA
+) {
+
+  confidence += 10;
+
+}
+
+
+// RSI CONFIRMATION
+if (
+  direction === "CALL ↑" &&
+  rsi >= 45 &&
+  rsi <= 65
+) {
+
+  confidence += 10;
+
+}
+
+if (
+  direction === "PUT ↓" &&
+  rsi >= 35 &&
+  rsi <= 55
+) {
+
+  confidence += 10;
+
+}
+
+
+// ======================================
+// SIGNAL STRENGTH
+// ======================================
+
+if (confidence >= 80) {
+
+  signalStrength = "STRONG";
+
+} else if (confidence >= 70) {
+
+  signalStrength = "NORMAL";
+
+} else {
+
+  signalStrength = "WEAK";
+
+}
+
+
+confidence =
+  Math.min(
+    confidence,
+    90
+  );
 
     const rsi =
       calculateRSI(
@@ -462,85 +602,7 @@ async function generateSignal() {
       );
 
 
-    let direction;
-
-
-    if (
-      ema9 > ema21 &&
-      rsi < 70
-    ) {
-
-      direction =
-        "CALL ↑";
-
-    } else if (
-      ema9 < ema21 &&
-      rsi > 30
-    ) {
-
-      direction =
-        "PUT ↓";
-
-    } else {
-
-      direction =
-        ema9 >= ema21
-          ? "CALL ↑"
-          : "PUT ↓";
-
-    }
-
-
-    let confidence =
-      70;
-
-
-    if (
-      direction === "CALL ↑"
-    ) {
-
-      if (ema9 > ema21) {
-
-        confidence += 5;
-
-      }
-
-
-      if (
-        rsi >= 45 &&
-        rsi <= 65
-      ) {
-
-        confidence += 5;
-
-      }
-
-    } else {
-
-      if (ema9 < ema21) {
-
-        confidence += 5;
-
-      }
-
-
-      if (
-        rsi >= 35 &&
-        rsi <= 55
-      ) {
-
-        confidence += 5;
-
-      }
-
-    }
-
-
-    confidence =
-      Math.min(
-        confidence,
-        85
-      );
+    
 
 
     // ======================================
@@ -579,7 +641,8 @@ async function generateSignal() {
     confidenceBox.innerText =
       "Confidence: " +
       confidence +
-      "%";
+      "% • " +
+      signalStrength;
 
 
     if (confidenceFill) {
@@ -624,6 +687,9 @@ async function generateSignal() {
       ema21.toFixed(5) +
       "<br>RSI: " +
       rsi.toFixed(1) +
+      "<br>Signal Strength: <b>" +
+      signalStrength +
+      "</b>" +
       "<br><b>Result: Waiting...</b>";
 
 
