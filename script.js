@@ -439,22 +439,29 @@ async function generateSignal() {
       closes[
         closes.length - 1
       ];
+const ema9 =
+  calculateEMA(
+    closes,
+    9
+  );
 
+const ema21 =
+  calculateEMA(
+    closes,
+    21
+  );
 
-    const ema9 =
-      calculateEMA(
-        closes,
-        9
-      );
+const rsi =
+  calculateRSI(
+    closes,
+    14
+  );
 
-
-    const ema21 =
-      calculateEMA(
-        closes,
-        21
-      );
 let direction;
 let signalStrength = "NORMAL";
+
+    
+
 
 
 // ======================================
@@ -595,11 +602,7 @@ confidence =
     90
   );
 
-    const rsi =
-      calculateRSI(
-        closes,
-        14
-      );
+    
 
 
     
